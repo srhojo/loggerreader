@@ -1,5 +1,7 @@
 package io.srhojo.java.loggerreader.services;
 
+import io.srhojo.java.loggerreader.daos.LogLine;
+import io.srhojo.java.loggerreader.daos.LogTypeEnum;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -9,94 +11,80 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Service
 public class ReaderLogFile {
 
 
-    public void reader(final File file) {
+    public List<LogLine> reader(final File file) {
 
 
         final Path path = Paths.get(file.getPath());
 
         try (Stream<String> lines = Files.lines(path)) {
 
-            //lines.filter(this::validLogLine).forEach(l -> System.out.println(extractInfoLine(l)));
-
-            lines.filter(this::validLogLine).forEach(l -> System.out.println(extractInfoLineRegex(l)));
+            return lines
+                    .filter(this::validLogLine)
+                    .map(this::extractInfoLineRegex)
+                    .collect(Collectors.toList());
 
 
         } catch (final IOException ioException) {
             ioException.printStackTrace();
+            throw new RuntimeException(ioException.getMessage());
         }
 
     }
 
 
-    private String localDateRegex = "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}.\\d{3}";
+    private String localDateRegex = "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}";
     private String logTypeRegex = "INFO|WARN|DEBUG|ERROR";
-    private String threadRegex = "";
-    private String packageRegex = "";
+    private String threadNumberRegex = " \\d{1} ";
+    private String threadRegex = "\\[.*\\]";
+    private String packageRegex = "([A-Za-z]{1}[A-Za-z\\d_]*\\.)+[A-Za-z][A-Za-z\\d_]*$";
 
-    private String extractInfoLineRegex(String line) {
+    private LogLine extractInfoLineRegex(String line) {
+        final List<String> splitLineThreadDescription = Arrays.asList(line.split(" : "));
 
-        List<String> splitLineThreadDescription = Arrays.asList(line.split(" : "));
+        final String threadInfo = splitLineThreadDescription.get(0).trim();
+        final String descriptionInfo = splitLineThreadDescription.size() > 1 ? splitLineThreadDescription.get(1).trim() : null;
 
-        String threadInfo = splitLineThreadDescription.get(0).trim();
-        String descriptionInfo = splitLineThreadDescription.size() > 1 ? splitLineThreadDescription.get(1).trim() : null;
+        return mapToLogLine(threadInfo,descriptionInfo);
+    }
 
+    private LogLine mapToLogLine(String threadInfo, String descriptionInfo) {
+        final LogLine logLine = new LogLine();
 
-        Pattern pattern = Pattern.compile(localDateRegex);
-        Matcher matcher = pattern.matcher(threadInfo);
+        final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+        logLine.setDate(LocalDateTime.parse(findMatcher(threadInfo,localDateRegex),dtf));
+        logLine.setLogType(LogTypeEnum.valueOf(findMatcher(threadInfo,logTypeRegex)));
+        logLine.setThreadNumber(Integer.valueOf(findMatcher(threadInfo,threadNumberRegex)));
+        logLine.setThreadName(findMatcher(threadInfo,threadRegex));
+        logLine.setPackageName(findMatcher(threadInfo,packageRegex));
+        logLine.setDescription(descriptionInfo);
 
-        String date = matcher.find()? matcher.group(0) : "N/A";
-        String logType = "N/A";
-        String threadNumber = "N/A";
-        String theadName = "N/A";
-        String packageName = "N/A";
-        String description = descriptionInfo;
-        String loggerFormat = "Date: %s; LogType: %s; ThreadNumber: %s; ThreadName: %s; Package: %s; Description: %s";
-
-        return String.format(loggerFormat,date,logType,threadNumber,theadName,packageName,description);
+        return logLine;
     }
 
 
-    private String extractInfoLine(String line) { // Extraer con regex mejor que con splits...
-
-        List<String> splitLineThreadDescription = Arrays.asList(line.split(" : "));
-
-        String threadInfo = splitLineThreadDescription.get(0).trim();
-        String descriptionInfo = splitLineThreadDescription.size() > 1 ? splitLineThreadDescription.get(1).trim() : null;
-
-
-        String[] threadInfoSplit = threadInfo.split("---");
-        String logInfo = threadInfoSplit[0].trim();
-        String threadInfo2 = threadInfoSplit[1].trim();
-
-        String[] logInfoSplit = logInfo.split(" ");
-        String[] threadInfo2Split = threadInfo2.split(" ");
-
-
-        String date = logInfoSplit[0].trim();
-        String logType = logInfoSplit[1].trim();
-        String threadNumber = logInfoSplit[2].trim();
-        String theadName = threadInfo2Split[0].trim();
-        String packageName = threadInfo2Split[1].trim();
-        String description = descriptionInfo;
-        String loggerFormat = "Date: %s; LogType: %s; ThreadNumber: %s; ThreadName: %s; Package: %s; Description: %s";
-
-        return String.format(loggerFormat,date,logType,threadNumber,theadName,packageName,description);
+    private String findMatcher(final String stringData, final String stringPattern) {
+        final Pattern pattern = Pattern.compile(stringPattern);
+        final Matcher matcher = pattern.matcher(stringData);
+        return matcher.find() ? matcher.group(0).trim() : "N/A";
     }
 
 
     private boolean validLogLine(final String line) {
-        return line.contains("WARN") | line.contains("INFO") | line.contains("ERROR") | line.contains("DEBUG");
+        return line.contains("WARN") || line.contains("INFO") || line.contains("ERROR") || line.contains("DEBUG");
     }
 
 }
