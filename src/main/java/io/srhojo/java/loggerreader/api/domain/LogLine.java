@@ -1,35 +1,21 @@
-package io.srhojo.java.loggerreader.daos;
+package io.srhojo.java.loggerreader.api.domain;
 
-import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "LOG_LINES")
 public class LogLine {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Column(name = "date", nullable = false)
     private LocalDateTime date;
 
-    @Enumerated(value = EnumType.STRING)
-    @Column(name = "log_type", nullable = false)
     private LogTypeEnum logType;
 
-    @Column(name = "thread_number")
     private Integer threadNumber;
 
-    @Column(name = "thread_name")
     private String threadName;
 
-    @Column(name = "package_name", length = 1000)
     private String packageName;
 
-    @Column(name = "description", length = 5000)
     private String description;
-
 
     public Long getId() {
         return id;
@@ -85,19 +71,5 @@ public class LogLine {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-
-    @Override
-    public String toString() {
-        return "LogLine{" +
-                "id=" + id +
-                ", date=" + date +
-                ", logType=" + logType +
-                ", threadNumber=" + threadNumber +
-                ", threadName='" + threadName + '\'' +
-                ", packageName='" + packageName + '\'' +
-                ", description='" + description + '\'' +
-                '}';
     }
 }

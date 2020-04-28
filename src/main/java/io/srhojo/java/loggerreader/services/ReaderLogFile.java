@@ -1,13 +1,11 @@
 package io.srhojo.java.loggerreader.services;
 
-import io.srhojo.java.loggerreader.daos.LogLine;
-import io.srhojo.java.loggerreader.daos.LogTypeEnum;
+import io.srhojo.java.loggerreader.daos.entities.LogLineEntity;
+import io.srhojo.java.loggerreader.daos.entities.LogTypeEntityEnum;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,8 +22,7 @@ import java.util.stream.Stream;
 public class ReaderLogFile {
 
 
-    public List<LogLine> reader(final File file) {
-
+    public List<LogLineEntity> reader(final File file) {
 
         final Path path = Paths.get(file.getPath());
 
@@ -51,7 +48,7 @@ public class ReaderLogFile {
     private String threadRegex = "\\[.*\\]";
     private String packageRegex = "([A-Za-z]{1}[A-Za-z\\d_]*\\.)+[A-Za-z][A-Za-z\\d_]*$";
 
-    private LogLine extractInfoLineRegex(String line) {
+    private LogLineEntity extractInfoLineRegex(String line) {
         final List<String> splitLineThreadDescription = Arrays.asList(line.split(" : "));
 
         final String threadInfo = splitLineThreadDescription.get(0).trim();
@@ -60,19 +57,19 @@ public class ReaderLogFile {
         return mapToLogLine(threadInfo,descriptionInfo);
     }
 
-    private LogLine mapToLogLine(String threadInfo, String descriptionInfo) {
-        final LogLine logLine = new LogLine();
+    private LogLineEntity mapToLogLine(String threadInfo, String descriptionInfo) {
+        final LogLineEntity logLineEntity = new LogLineEntity();
 
         final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        logLine.setDate(LocalDateTime.parse(findMatcher(threadInfo,localDateRegex),dtf));
-        logLine.setLogType(LogTypeEnum.valueOf(findMatcher(threadInfo,logTypeRegex)));
-        logLine.setThreadNumber(Integer.valueOf(findMatcher(threadInfo,threadNumberRegex)));
-        logLine.setThreadName(findMatcher(threadInfo,threadRegex));
-        logLine.setPackageName(findMatcher(threadInfo,packageRegex));
-        logLine.setDescription(descriptionInfo);
+        logLineEntity.setDate(LocalDateTime.parse(findMatcher(threadInfo,localDateRegex),dtf));
+        logLineEntity.setLogType(LogTypeEntityEnum.valueOf(findMatcher(threadInfo,logTypeRegex)));
+        logLineEntity.setThreadNumber(Integer.valueOf(findMatcher(threadInfo,threadNumberRegex)));
+        logLineEntity.setThreadName(findMatcher(threadInfo,threadRegex));
+        logLineEntity.setPackageName(findMatcher(threadInfo,packageRegex));
+        logLineEntity.setDescription(descriptionInfo);
 
-        return logLine;
+        return logLineEntity;
     }
 
 
